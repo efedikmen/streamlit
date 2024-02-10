@@ -69,10 +69,6 @@ def run():
     print(df)
     st.write(df)
 
-    st.sidebar.success("")
-
-    st.markdown('')
-
 
 if __name__ == "__main__":
     run()
