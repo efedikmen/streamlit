@@ -14,8 +14,50 @@
 
 import streamlit as st
 from streamlit.logger import get_logger
+import requests as rq
+from bs4 import BeautifulSoup
+from datetime import datetime
+import re
+import pandas as pd
 
 LOGGER = get_logger(__name__)
+
+def get_hakan():
+    r = rq.get('https://www.hakandoviz.com/canli-veri/')
+    soup = BeautifulSoup(r.content, 'html.parser')
+    rows = soup.select('tbody tr')
+    row = next((element for element in rows if "USD/TRY" in element.text),None)
+    hakan_bid = row.find('span', class_='USD/TRY buy').text.strip().replace(',','.')
+    hakan_ask = row.find('span', class_='USD/TRY sell').text.strip().replace(',','.')
+    return ['Hakan Döviz', hakan_bid, hakan_ask]
+    
+def get_nadir():
+    r1=rq.get('https://www.nadirdoviz.com/mobil/')
+    soup1 = BeautifulSoup(r1.content, 'html.parser')
+    rows1 = soup1.select('tbody tr')
+    row1 = next((element for element in rows1 if "USD/TL" in element.text),None)
+    nadir = row1.find_all('td',class_='fadg')
+    nadir_bid =nadir[0].text.strip().replace(',','.')
+    nadir_ask =nadir[1].text.strip().replace(',','.')
+    return ['Nadir Döviz',nadir_bid, nadir_ask]
+
+def get_atlas():
+    r2=rq.get('http://www.atlasdoviz.com/')
+    soup2 = BeautifulSoup(r2.content, 'html.parser')
+    rows2 = soup2.find('div', class_='arka').text.strip()
+    atlas = re.split(r'\D+', rows2)
+    atlas_bid = atlas[1]+'.'+atlas[2]
+    atlas_ask = atlas[3]+'.'+atlas[4]
+    return ['Atlas Döviz', atlas_bid, atlas_ask]
+
+def get_all():
+    df = pd.DataFrame(columns=pd.Index(['Büro','Alış','Satış']), index=None)
+    df.loc[0]=get_hakan()
+    df.loc[1]=get_atlas()
+    df.loc[2]=get_nadir()
+    df = df.set_index('Büro')
+    return df
+
 
 
 def run():
@@ -23,28 +65,13 @@ def run():
         page_title="Hello",
         page_icon="👋",
     )
+    df = get_all()
+    print(df)
+    st.write(df)
 
-    st.write("# Welcome to Streamlit! 👋")
+    st.sidebar.success("")
 
-    st.sidebar.success("Select a demo above.")
-
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
-    """
-    )
+    st.markdown('')
 
 
 if __name__ == "__main__":
